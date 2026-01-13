@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
+from src.matplotlib_point_extraction import digitize_with_matplotlib
 from src.opencv_point_extraction import digitize_raman_spectrum
 
 from .agent import FigureReaderRequest, FigureReaderResult, FigureReaderTool
@@ -64,15 +65,56 @@ class OpenCVPointExtractor(FigureReaderTool):
 class MatplotlibImageExtractor(FigureReaderTool):
     name = "matplotlib"
 
+    def __init__(
+        self,
+        *,
+        gemini_client: Optional[GeminiClient],
+        prompt_text: str,
+        params_root: Path,
+        csv_root: Path,
+    ):
+        self._gemini_client = gemini_client
+        self._prompt_text = prompt_text
+        self._params_root = params_root
+        self._csv_root = csv_root
+
     def run(self, request: FigureReaderRequest) -> FigureReaderResult:  # pragma: no cover
-        notes = (
-            "Matplotlib-based digitizer is not implemented yet. "
-            "Stub included to reserve the tool interface."
+        params_path = self._params_root / f"{request.image_path.stem}_limits.json"
+        csv_path = self._csv_root / f"{request.image_path.stem}_matplotlib.csv"
+        params_path.parent.mkdir(parents=True, exist_ok=True)
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+        needs_prompt = request.regenerate_prompts or not params_path.exists()
+        if needs_prompt:
+            if self._gemini_client is None:
+                raise RuntimeError(
+                    "Gemini client unavailable; cannot build OpenCV limits prompt."
+                )
+            llm_json = self._gemini_client.generate_json(
+                self._prompt_text,
+                image_path=request.image_path,
+                temperature=0.0,
+            )
+            json.loads(llm_json)
+            params_path.write_text(llm_json, encoding="utf-8")
+
+        digitize_with_matplotlib(
+            image_path=request.image_path,
+            llm_params_json=params_path,
+            output_csv=csv_path,
         )
+        metadata = {"params_path": params_path, "csv_path": csv_path}
+        if needs_prompt:
+            metadata["prompt_refreshed"] = True
+
+        # notes = (
+        #     "Matplotlib-based digitizer is not implemented yet. "
+        #     "Stub included to reserve the tool interface."
+        # )
         return FigureReaderResult(
             tool_name=self.name,
-            outputs={},
-            metadata={"status": "not_implemented", "notes": notes},
+            outputs={"csv": csv_path, "llm_params": params_path},
+            metadata=metadata,
         )
 
 
@@ -132,7 +174,14 @@ def build_tools(args, gemini_client: Optional[GeminiClient]) -> List[FigureReade
             csv_root=csv_root,
         )
     )
-    tools.append(MatplotlibImageExtractor())
+    tools.append(
+        MatplotlibImageExtractor(
+            gemini_client=gemini_client,
+            prompt_text=opencv_prompt_text,
+            params_root=params_root,
+            csv_root=csv_root,
+        )
+    )
 
     if gemini_client is not None:
         vlm_prompt_path = Path(args.vlm_prompt_path)

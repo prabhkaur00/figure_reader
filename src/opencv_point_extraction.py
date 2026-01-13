@@ -60,6 +60,8 @@ def digitize_raman_spectrum(
         px_x_min, px_y_top, px_x_max, px_y_bottom = _auto_detect_plot_area(img)
         plot_area_source = "opencv_auto"
     else:
+        y_min = float(params.get("y_axis", {}).get("min_value", 0))
+        y_max = float(params.get("y_axis", {}).get("max_value", 1))
         px_x_min = int(pa["x_min"])
         px_x_max = int(pa["x_max"])
         px_y_top = int(pa["y_top"])
@@ -103,8 +105,11 @@ def digitize_raman_spectrum(
 
         data_x = (col / x_den) * (x_max - x_min) + x_min
         intensity_norm = (y_den - y_local) / y_den
+        intensity_final = intensity_norm * (y_max - y_min) + y_min
+        print({data_x, intensity_final })
 
-        data_points.append((data_x, intensity_norm))
+        data_points.append((data_x, intensity_final))
+
 
     df = pd.DataFrame(data_points, columns=["Raman_Shift_cm-1", "Intensity_norm"])
     df.to_csv(output_csv, index=False)
