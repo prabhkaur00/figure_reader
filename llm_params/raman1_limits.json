@@ -1,0 +1,30 @@
+{
+  "x_axis": {
+    "quantity": "Raman shift",
+    "units": "cm^-1",
+    "min_value": 0.0,
+    "max_value": 4000.0
+  },
+  "y_axis": {
+    "quantity": "Intensity",
+    "units": "a.u.",
+    "min_value": 0.0,
+    "max_value": 175.0
+  },
+  "plot_area_pixels": {
+    "x_min": 200,
+    "x_max": 1500,
+    "y_top": 170,
+    "y_bottom": 1089
+  },
+  "curve_properties": {
+    "primary_curve_color": "blue",
+    "line_style": "solid",
+    "approx_line_thickness_pixels": 1.5
+  },
+  "confidence": {
+    "axis_values": "high",
+    "plot_area": "high"
+  },
+  "notes": "All axis values are clearly labeled. Plot area boundaries are distinct."
+}
