@@ -36,6 +36,7 @@ class OpenCVPointExtractor(FigureReaderTool):
         needs_prompt = request.regenerate_prompts or not params_path.exists()
         if needs_prompt:
             if self._gemini_client is None:
+                print(self._gemini_client)
                 raise RuntimeError(
                     "Gemini client unavailable; cannot build OpenCV limits prompt."
                 )

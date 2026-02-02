@@ -6,6 +6,8 @@ import matplotlib.colors as mcolors
 import pandas as pd
 import numpy as np
 
+from src.hough_line_transform import get_pixel_coordinates
+
 """
 Placeholder for a Matplotlib-based point extraction pipeline.
 
@@ -33,6 +35,19 @@ def digitize_with_matplotlib(
     params = json.loads(Path(llm_params_json).read_text(encoding="utf-8"))
     x_min = float(params["x_axis"]["min_value"])
     x_max = float(params["x_axis"]["max_value"])
+    y_min = float(params.get("y_axis", {}).get("min_value", 0))
+    y_max = float(params.get("y_axis", {}).get("max_value", 1))
+
+    pixel_coordinates = get_pixel_coordinates(image_path)
+
+    origin_x = pixel_coordinates["origin_x"]
+    origin_y = pixel_coordinates["origin_y"]
+    terminal_x = pixel_coordinates["terminal_x"]
+    terminal_y = pixel_coordinates["terminal_y"]
+    px_x_min = pixel_coordinates["px_x_min"]
+    px_x_max = pixel_coordinates["px_x_max"]
+    px_y_min = pixel_coordinates["px_y_min"]
+    px_y_max = pixel_coordinates["px_y_max"]
 
     img = plt.imread(str(image_path))
     if img.max() > 1.0: # Handle 0-255 uint8 images
@@ -40,14 +55,6 @@ def digitize_with_matplotlib(
     
     H, W, _ = img.shape
 
-    pa = params.get("plot_area_pixels") or {}
-
-    y_min = float(params.get("y_axis", {}).get("min_value", 0))
-    y_max = float(params.get("y_axis", {}).get("max_value", 1))
-    px_x_min = int(pa.get("x_min", 0))
-    px_x_max = int(pa.get("x_max", W))
-    px_y_top = int(pa.get("y_top", 0))
-    px_y_bottom = int(pa.get("y_bottom", H))
 
     # Detect Blue Curve using NumPy - this is equivalent to OpenCV inRange masking
     hsv = mcolors.rgb_to_hsv(img[:, :, :3])
@@ -62,20 +69,19 @@ def digitize_with_matplotlib(
 
     # Extract Points
     data_points = []
-    roi_width = px_x_max - px_x_min
-    roi_height = px_y_bottom - px_y_top
+    roi_width = terminal_x - origin_x
+    roi_height = origin_y - terminal_y
 
-    for col_idx in range(px_x_min, px_x_max):
-        y_indices = np.where(mask[px_y_top:px_y_bottom, col_idx])[0]
+    for col_idx in range(origin_x, terminal_x):
+        y_indices = np.where(mask[terminal_y:origin_y, col_idx])[0]
+        # rel_x = (col_idx - px_x_min) / max(1, roi_width - 1)
+        data_x = x_min + (col_idx - px_x_min)* (x_max - x_min) / (px_x_max - px_x_min)
         
-        if len(y_indices) > 0:
-            y_local = np.median(y_indices)
-            
-            rel_x = (col_idx - px_x_min) / max(1, roi_width - 1)
-            data_x = rel_x * (x_max - x_min) + x_min
-            
-            intensity_norm = (roi_height - 1 - y_local) / max(1, roi_height - 1)
-            intensity_final = intensity_norm * (y_max - y_min) + y_min
+        for y_local in y_indices:
+            # y_local = np.median(y_indices)
+            # intensity_norm = (roi_height - 1 - y_local) / max(1, roi_height - 1)
+            p_y = y_local + terminal_y
+            intensity_final = y_min + (p_y - px_y_min)* (y_max - y_min) / (px_y_max - px_y_min)
             
             data_points.append((data_x, intensity_final))
 

@@ -9,20 +9,20 @@ Return your answer as a JSON object with these fields only:
 x_axis:
 	•	quantity: Raman shift
 	•	units: cm^-1
-	•	min_value: numeric or null
-	•	max_value: numeric or null
+	•	min_value: minimum marked tick value on the x axis
+	•	max_value: maximum marked tick value on the x axis
 
 y_axis:
 	•	quantity: Intensity
 	•	units: a.u.
-	•	min_value: numeric or null
-	•	max_value: numeric or null
+	•	min_value: minimum marked tick value on the y axis
+	•	max_value: maximum marked tick value on the y axis
 
 plot_area_pixels:
-	•	x_min: integer pixel coordinate of the left edge of the plotting area
-	•	x_max: integer pixel coordinate of the right edge of the plotting area
-	•	y_top: integer pixel coordinate of the top edge of the plotting area
-	•	y_bottom: integer pixel coordinate of the bottom edge of the plotting area
+	•	x_min: integer pixel coordinate of the left edge of the plotting area, or the x coordinate in pixels of the origin
+	•	x_max: integer pixel coordinate of the right edge of the plotting area, max possible x coordinate in pixels in the image
+	•	y_top: integer pixel coordinate of the top edge of the plotting area, or the y coordinate in pixels of the origin
+	•	y_bottom: integer pixel coordinate of the bottom edge of the plotting area, max possible y coordinate in pixels in the image
 
 curve_properties:
 	•	primary_curve_color: color name or brief RGB/HSV description
@@ -31,7 +31,6 @@ curve_properties:
 
 confidence:
 	•	axis_values: high, medium, or low
-	•	plot_area: high, medium, or low
 
 notes:
 	•	brief explanation of any ambiguity or assumptions

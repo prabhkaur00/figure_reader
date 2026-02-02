@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+from unittest import result
 
 import cv2
 import numpy as np
 import pandas as pd
+
+from src.hough_line_transform import get_pixel_coordinates 
 
 
 def _auto_detect_plot_area(img_bgr: np.ndarray):
@@ -50,35 +53,51 @@ def digitize_raman_spectrum(
 
     x_min = float(params["x_axis"]["min_value"])
     x_max = float(params["x_axis"]["max_value"])
+    y_min = float(params.get("y_axis", {}).get("min_value", 0))
+    y_max = float(params.get("y_axis", {}).get("max_value", 1))
+
+    pixel_coordinates = get_pixel_coordinates(image_path)
+
+    origin_x = pixel_coordinates["origin_x"]
+    origin_y = pixel_coordinates["origin_y"]
+    terminal_x = pixel_coordinates["terminal_x"]
+    terminal_y = pixel_coordinates["terminal_y"]
+    px_x_min = pixel_coordinates["px_x_min"]
+    px_x_max = pixel_coordinates["px_x_max"]
+    px_y_min = pixel_coordinates["px_y_min"]
+    px_y_max = pixel_coordinates["px_y_max"]
 
     img = cv2.imread(str(image_path))
     if img is None:
         raise ValueError(f"Could not load image at {image_path}")
 
-    pa = params.get("plot_area_pixels") or {}
-    if any(pa.get(k) is None for k in ["x_min", "x_max", "y_top", "y_bottom"]):
-        px_x_min, px_y_top, px_x_max, px_y_bottom = _auto_detect_plot_area(img)
-        plot_area_source = "opencv_auto"
-    else:
-        y_min = float(params.get("y_axis", {}).get("min_value", 0))
-        y_max = float(params.get("y_axis", {}).get("max_value", 1))
-        px_x_min = int(pa["x_min"])
-        px_x_max = int(pa["x_max"])
-        px_y_top = int(pa["y_top"])
-        px_y_bottom = int(pa["y_bottom"])
-        plot_area_source = "llm"
+    # pa = params.get("pixels") or {}
+    # if any(pa.get(k) is None for k in ["origin_x", "origin_y", "px_x_min", "px_x_max", "px_y_min", "px_y_max"]):
+    #     px_x_min, px_y_top, px_x_max, px_y_bottom = _auto_detect_plot_area(img)
+    #     plot_area_source = "opencv_auto"
+    # else:
+    #     origin_x = int(params["pixels"]["origin_x"])
+    #     origin_y = int(params["pixels"]["origin_y"])
+    #     terminal_x = int(params["pixels"]["terminal_x"])
+    #     terminal_y = int(params["pixels"]["terminal_y"])
+    #     px_x_min = int(params["pixels"]["px_x_min"])  # Pixel of first X marking
+    #     px_x_max = int(params["pixels"]["px_x_max"])  # Pixel of last X marking
+    #     px_y_min = int(params["pixels"]["px_y_min"])  # Pixel of lowest Y marking (near origin)
+    #     px_y_max = int(params["pixels"]["px_y_max"])  # Pixel of highest Y marking (top)
+
+    #     plot_area_source = "llm"
 
     H, W = img.shape[:2]
-    px_x_min = max(0, min(px_x_min, W - 1))
-    px_x_max = max(0, min(px_x_max, W))
-    px_y_top = max(0, min(px_y_top, H - 1))
-    px_y_bottom = max(0, min(px_y_bottom, H))
+    # px_x_min = max(0, min(px_x_min, W - 1))
+    # px_x_max = max(0, min(px_x_max, W))
+    # px_y_top = max(0, min(px_y_top, H - 1))
+    # px_y_bottom = max(0, min(px_y_bottom, H))
 
-    if px_x_max <= px_x_min or px_y_bottom <= px_y_top:
-        raise ValueError("Invalid plot_area_pixels after clamping")
+    # if px_x_max <= px_x_min or px_y_bottom <= px_y_top:
+    #     raise ValueError("Invalid plot_area_pixels after clamping")
 
-    width = px_x_max - px_x_min
-    height = px_y_bottom - px_y_top
+    width = terminal_x - origin_x
+    # height = px_y_bottom - px_y_top
 
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -86,29 +105,32 @@ def digitize_raman_spectrum(
     upper_blue = np.array([140, 255, 255])
 
     mask_curve = cv2.inRange(hsv, lower_blue, upper_blue)
-    roi = mask_curve[px_y_top:px_y_bottom, px_x_min:px_x_max]
+    roi = mask_curve[terminal_y:origin_y, origin_x:terminal_x]
 
     kernel = np.ones((3, 3), np.uint8)
     roi = cv2.morphologyEx(roi, cv2.MORPH_CLOSE, kernel, iterations=1)
 
     data_points = []
 
-    x_den = max(width - 1, 1)
-    y_den = max(height - 1, 1)
+    # x_den = max(width - 1, 1)
+    # y_den = max(height - 1, 1)
 
     for col in range(width):
         ys = np.where(roi[:, col] > 0)[0]
         if ys.size == 0:
             continue
 
-        y_local = float(np.median(ys))
+        # data_x = (col / x_den) * (x_max - x_min) + x_min
+        px_x = col + origin_x
+        data_x = x_min + (px_x - px_x_min)* (x_max - x_min) / (px_x_max - px_x_min)
+        for y_local in ys:
+            # y_local = float(np.median(ys))
+            # intensity_norm = (y_den - y_local) / y_den
+            # intensity_final = intensity_norm * (y_max - y_min) + y_min
+            px_y = y_local + terminal_y
+            intensity_final = y_min + (px_y - px_y_min)* (y_max - y_min) / (px_y_max - px_y_min)
 
-        data_x = (col / x_den) * (x_max - x_min) + x_min
-        intensity_norm = (y_den - y_local) / y_den
-        intensity_final = intensity_norm * (y_max - y_min) + y_min
-        print({data_x, intensity_final })
-
-        data_points.append((data_x, intensity_final))
+            data_points.append((data_x, intensity_final))
 
 
     df = pd.DataFrame(data_points, columns=["Raman_Shift_cm-1", "Intensity_norm"])
@@ -116,12 +138,10 @@ def digitize_raman_spectrum(
 
     print(f"[digitize] image: {image_path}")
     print(f"[digitize] params: {llm_params_json}")
-    print(f"[digitize] plot_area source: {plot_area_source}")
-    print(f"[digitize] plot_area: x[{px_x_min}:{px_x_max}] y[{px_y_top}:{px_y_bottom}]")
-    print(f"[digitize] axis: X[{x_min}..{x_max}]")
     print(f"[digitize] points: {len(df)}")
     print(f"[digitize] saved: {output_csv}")
     return df
+
 
 if __name__ == "__main__":
     output_path = "DIGITIZATION/OpenCV/raman1.csv"

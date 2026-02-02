@@ -2,28 +2,28 @@
   "x_axis": {
     "quantity": "Raman shift",
     "units": "cm^-1",
-    "min_value": 0,
-    "max_value": 4000
+    "min_value": 0.0,
+    "max_value": 4000.0
   },
   "y_axis": {
     "quantity": "Intensity",
     "units": "a.u.",
-    "min_value": 0,
-    "max_value": 175
+    "min_value": 0.0,
+    "max_value": 6000.0
   },
   "plot_area_pixels": {
-    "x_min": 118,
-    "x_max": 900,
-    "y_top": 92,
-    "y_bottom": 700
+    "x_min": 100,
+    "x_max": 700,
+    "y_top": 80,
+    "y_bottom": 520
   },
   "curve_properties": {
     "primary_curve_color": "blue",
     "line_style": "solid",
-    "approx_line_thickness_pixels": 1.5
+    "approx_line_thickness_pixels": 2
   },
   "confidence": {
     "axis_values": "high"
   },
-  "notes": "Pixel coordinates for the plot area are estimated visually from the image boundaries of the grid."
+  "notes": "All values were clearly discernible from the image. Pixel coordinates are estimated visually."
 }

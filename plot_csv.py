@@ -21,7 +21,7 @@ def plot_three_csvs(est1_path, est2_path, gt_path, output_filename):
 
     # Plot Estimate 2
     plt.plot(df_est2.iloc[:, 0], df_est2.iloc[:, 1], 
-             label="OpenCV Estimate", alpha=0.7, linestyle=':')
+             label="OpenCV Estimate", alpha=0.7, linestyle='-')
 
     # Formatting
     plt.title("Comparison of Raman Spectra: Estimates vs. Ground Truth")
@@ -36,8 +36,8 @@ def plot_three_csvs(est1_path, est2_path, gt_path, output_filename):
 
 if __name__ == "__main__":
     plot_three_csvs(
-        "./OpenCV/raman1_matplotlib.csv", 
-        "./OpenCV/raman1_opencv.csv", 
-        "./OpenCV/raman1_gt.csv", 
-        "./Comparison/raman1_comparison.png"
+        "./OpenCV/raman3_matplotlib.csv", 
+        "./OpenCV/raman3_opencv.csv", 
+        "./OpenCV/raman3_gt.csv", 
+        "./Comparison/raman3_comparison.png"
     )
